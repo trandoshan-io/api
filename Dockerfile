@@ -8,7 +8,8 @@ RUN go get -v github.com/gorilla/mux && \
     go get -v github.com/joho/godotenv && \
     go get -v go.mongodb.org/mongo-driver/mongo && \
     go get -v go.mongodb.org/mongo-driver/mongo/options && \
-    go get -v go.mongodb.org/mongo-driver/mongo/readpref
+    go get -v go.mongodb.org/mongo-driver/mongo/readpref && \
+    go get -v github.com/creekorful/microgo/pkg/httputil
 
 COPY . /app/
 WORKDIR /app

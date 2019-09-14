@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/creekorful/microgo/pkg/httputil"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,10 +13,6 @@ import (
 	"os"
 	"time"
 )
-
-type SearchCommand struct {
-	Criteria string `json:"criteria"`
-}
 
 type SearchResult struct {
 	Url       string    `json:"url"`
@@ -44,8 +41,10 @@ func main() {
 	router := mux.NewRouter()
 
 	// Register endpoints
-	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet)
-	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet)
+	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+
+	router.Use(mux.CORSMethodMiddleware(router))
 
 	log.Println("API will listen on: http://0.0.0.0:8080")
 	if err := http.ListenAndServe("0.0.0.0:8080", router); err != nil {
@@ -56,13 +55,25 @@ func main() {
 func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	//contentCollection := client.Database("trandoshan").Collection("pages")
 	return func(w http.ResponseWriter, r *http.Request) {
-		return //TODO
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		var pages []SearchResult
+		pages = append(pages, SearchResult{
+			Url:       "http://fezfregafez235gre.onion",
+			CrawlDate: time.Now(),
+		})
+
+		if err := httputil.WriteJsonResponse(w, 200, pages); err != nil {
+			log.Println("Error while writing response to client: " + err.Error())
+		}
 	}
 }
 
 func countPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	//contentCollection := client.Database("trandoshan").Collection("pages")
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
 		return //TODO
 	}
 }
