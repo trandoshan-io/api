@@ -21,7 +21,6 @@ type SearchCommand struct {
 
 type SearchResult struct {
 	Url       string    `json:"url"`
-	Content   string    `json:"content"`
 	CrawlDate time.Time `json:"crawlDate"`
 }
 
@@ -103,13 +102,11 @@ func searchPagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, 
 				break
 			}
 
-			// todo process command
-			log.Println(command)
+			// todo process command here
 
 			var results []SearchResult
 			results = append(results, SearchResult{
 				Url:       "http://sometzegregreg.onion",
-				Content:   "LOL",
 				CrawlDate: time.Now(),
 			})
 
