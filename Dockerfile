@@ -6,7 +6,6 @@ RUN apk update && apk upgrade && \
 
 RUN go get -v github.com/gorilla/mux && \
     go get -v github.com/joho/godotenv && \
-    go get -v github.com/gorilla/websocket && \
     go get -v go.mongodb.org/mongo-driver/mongo && \
     go get -v go.mongodb.org/mongo-driver/mongo/options && \
     go get -v go.mongodb.org/mongo-driver/mongo/readpref

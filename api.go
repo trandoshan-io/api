@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -49,9 +47,6 @@ func main() {
 	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet)
 	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet)
 
-	// Register real-time endpoints
-	router.HandleFunc("/pages-stream", searchPagesStreamHandler(client))
-
 	log.Println("API will listen on: http://0.0.0.0:8080")
 	if err := http.ListenAndServe("0.0.0.0:8080", router); err != nil {
 		log.Println("fatal error while trying to listen: " + err.Error())
@@ -74,55 +69,3 @@ func countPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http
 
 //TODO: add endpoint to interface with RabbitMQ API
 //TODO: add endpoint to push url in todo queue
-
-func searchPagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
-	//TODO: better upgrader
-	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
-		return true
-	}}
-	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Println("Error while upgrading connection:", err.Error())
-			return
-		}
-		defer c.Close()
-
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("Error while reading:", err.Error())
-				break
-			}
-
-			// Unmarshal command
-			var command SearchCommand
-			if err := json.Unmarshal(message, &command); err != nil {
-				log.Println("Error while unmarshaling command: " + err.Error())
-				break
-			}
-
-			// todo process command here
-
-			var results []SearchResult
-			results = append(results, SearchResult{
-				Url:       "http://sometzegregreg.onion",
-				CrawlDate: time.Now(),
-			})
-
-			// Serialize result into json
-			resultJson, err := json.Marshal(results)
-			if err != nil {
-				log.Println("Error while marshalling result: " + err.Error())
-				break
-			}
-
-			// Send data back to client
-			err = c.WriteMessage(mt, resultJson)
-			if err != nil {
-				log.Println("Error while writing response to client: " + err.Error())
-				break
-			}
-		}
-	}
-}
