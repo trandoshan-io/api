@@ -16,9 +16,18 @@ import (
 	"time"
 )
 
+// Json object returned to the client
 type SearchResult struct {
+	Id        string    `json:"id"`
 	Url       string    `json:"url"`
 	CrawlDate time.Time `json:"crawlDate"`
+}
+
+// Database page mapping
+type PageData struct {
+	Id        primitive.ObjectID `bson:"_id"`
+	Url       string             `bson:"url"`
+	CrawlDate time.Time          `bson:"crawlDate"`
 }
 
 func main() {
@@ -78,13 +87,13 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 
 		var pages []SearchResult
 		for cur.Next(ctx) {
-			var page SearchResult
+			var page PageData
 			err := cur.Decode(&page)
 			if err != nil {
 				log.Println("Error while decoding result: " + err.Error())
 				break
 			}
-			pages = append(pages, page)
+			pages = append(pages, SearchResult{Id: page.Id.Hex(), Url: page.Url, CrawlDate: page.CrawlDate})
 		}
 		if err := cur.Err(); err != nil {
 			log.Println("Error with cursor: " + err.Error())
