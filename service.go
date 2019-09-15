@@ -1,0 +1,81 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"log"
+	"time"
+)
+
+// Json object returned to the client
+type SearchResult struct {
+	Id        string    `json:"id"`
+	Url       string    `json:"url"`
+	CrawlDate time.Time `json:"crawlDate"`
+}
+
+// Database page mapping
+type PageData struct {
+	Id        primitive.ObjectID `bson:"_id"`
+	Url       string             `bson:"url"`
+	CrawlDate time.Time          `bson:"crawlDate"`
+	Content   string             `bson:"content"`
+}
+
+// Search pages using search criteria
+// callback: callback triggered when a page match given search criteria
+// TODO: use channel instead
+func searchPages(client *mongo.Client, searchCriteria string, callback func(data *PageData)) error {
+	// Setup production context and acquire database collection
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	pageCollection := client.Database("trandoshan").Collection("pages")
+
+	// Query the database for result
+	filter := bson.D{{"content", primitive.Regex{Pattern: searchCriteria, Options: "i"}}}
+	cur, err := pageCollection.Find(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("Error while querying database: " + err.Error())
+	}
+	defer cur.Close(ctx)
+
+	for cur.Next(ctx) {
+		var page PageData
+		err := cur.Decode(&page)
+		if err != nil {
+			// if there is a decoding error dot not return error since other results may be decoded
+			log.Println("Error while decoding result: " + err.Error())
+			// go to next iteration
+			break
+		}
+		// trigger callback with decoded page
+		callback(&page)
+	}
+	if err := cur.Err(); err != nil {
+		return fmt.Errorf("Error with cursor: " + err.Error())
+	}
+
+	return nil
+}
+
+// Get page using his object-id
+func getPage(client *mongo.Client, objectIdHex string) (*PageData, error) {
+	objectId, err := primitive.ObjectIDFromHex(objectIdHex)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to convert objectId from hex value: " + err.Error())
+	}
+
+	// Setup production context and acquire database collection
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	pageCollection := client.Database("trandoshan").Collection("pages")
+
+	// Query database for result
+	var page PageData
+	if err := pageCollection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&page); err != nil {
+		return nil, fmt.Errorf("Error while decoding result: " + err.Error())
+	}
+
+	return &page, nil
+}

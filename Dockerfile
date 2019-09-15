@@ -16,7 +16,7 @@ RUN go get -v github.com/gorilla/mux && \
 COPY . /app/
 WORKDIR /app
 
-RUN go build -v api.go handler.go
+RUN go build -v api.go handler.go service.go
 
 # runtime image
 FROM alpine:latest

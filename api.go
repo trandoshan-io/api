@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -13,21 +12,6 @@ import (
 	"os"
 	"time"
 )
-
-// Json object returned to the client
-type SearchResult struct {
-	Id        string    `json:"id"`
-	Url       string    `json:"url"`
-	CrawlDate time.Time `json:"crawlDate"`
-}
-
-// Database page mapping
-type PageData struct {
-	Id        primitive.ObjectID `bson:"_id"`
-	Url       string             `bson:"url"`
-	CrawlDate time.Time          `bson:"crawlDate"`
-	Content   string             `bson:"content"`
-}
 
 func main() {
 	log.Println("Initializing API")
