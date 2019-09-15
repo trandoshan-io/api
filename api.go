@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -45,6 +46,8 @@ func main() {
 	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 
+	// todo add websocket endpoint
+
 	router.Use(mux.CORSMethodMiddleware(router))
 
 	log.Println("API will listen on: http://0.0.0.0:8080")
@@ -54,15 +57,19 @@ func main() {
 }
 
 func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
-	contentCollection := client.Database("trandoshan").Collection("pages")
+	pageCollection := client.Database("trandoshan").Collection("pages")
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// get search criteria
+		searchCriteria := mux.Vars(r)["criteria"]
 
 		// setup production context
 		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
 		// Query the database for result
-		cur, err := contentCollection.Find(ctx, bson.D{})
+		filter := bson.D{{"content", primitive.Regex{Pattern: searchCriteria, Options: "i"}}}
+		cur, err := pageCollection.Find(ctx, filter)
 		if err != nil {
 			log.Println("Error while querying database: " + err.Error())
 			return
@@ -91,7 +98,7 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 }
 
 func countPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
-	//contentCollection := client.Database("trandoshan").Collection("pages")
+	//pageCollection := client.Database("trandoshan").Collection("pages")
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
