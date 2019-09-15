@@ -5,6 +5,7 @@ RUN apk update && apk upgrade && \
     apk add --no-cache bash git openssh
 
 RUN go get -v github.com/gorilla/mux && \
+    go get -v github.com/gorilla/websocket && \
     go get -v github.com/joho/godotenv && \
     go get -v go.mongodb.org/mongo-driver/bson && \
     go get -v go.mongodb.org/mongo-driver/bson/primitive && \
