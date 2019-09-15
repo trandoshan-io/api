@@ -62,7 +62,7 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		// get search criteria
-		searchCriteria := mux.Vars(r)["criteria"]
+		searchCriteria := r.FormValue("criteria")
 
 		// setup production context
 		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
