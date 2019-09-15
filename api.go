@@ -5,6 +5,7 @@ import (
 	"github.com/creekorful/microgo/pkg/httputil"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -38,10 +39,13 @@ func main() {
 		log.Fatal("Unable to connect to database: ", err.Error())
 	}
 
+	// setup production context
+	ctx, _ = context.WithTimeout(context.Background(), 30*time.Second)
+
 	router := mux.NewRouter()
 
 	// Register endpoints
-	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/pages", searchPagesHandler(client, ctx)).Methods(http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 
 	router.Use(mux.CORSMethodMiddleware(router))
@@ -52,16 +56,33 @@ func main() {
 	}
 }
 
-func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
-	//contentCollection := client.Database("trandoshan").Collection("pages")
+func searchPagesHandler(client *mongo.Client, ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
+	contentCollection := client.Database("trandoshan").Collection("pages")
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
+		// Query the database for result
+		cur, err := contentCollection.Find(ctx, bson.D{})
+		if err != nil {
+			log.Println("Error while querying database: " + err.Error())
+			return
+		}
+		defer cur.Close(ctx)
+
 		var pages []SearchResult
-		pages = append(pages, SearchResult{
-			Url:       "http://fezfregafez235gre.onion",
-			CrawlDate: time.Now(),
-		})
+		for cur.Next(ctx) {
+			var page SearchResult
+			err := cur.Decode(&page)
+			if err != nil {
+				log.Println("Error while decoding result: " + err.Error())
+				break
+			}
+			pages = append(pages, page)
+		}
+		if err := cur.Err(); err != nil {
+			log.Println("Error with cursor: " + err.Error())
+			return
+		}
 
 		if err := httputil.WriteJsonResponse(w, 200, pages); err != nil {
 			log.Println("Error while writing response to client: " + err.Error())
