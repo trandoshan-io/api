@@ -39,13 +39,10 @@ func main() {
 		log.Fatal("Unable to connect to database: ", err.Error())
 	}
 
-	// setup production context
-	ctx, _ = context.WithTimeout(context.Background(), 30*time.Second)
-
 	router := mux.NewRouter()
 
 	// Register endpoints
-	router.HandleFunc("/pages", searchPagesHandler(client, ctx)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 
 	router.Use(mux.CORSMethodMiddleware(router))
@@ -56,10 +53,13 @@ func main() {
 	}
 }
 
-func searchPagesHandler(client *mongo.Client, ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
+func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	contentCollection := client.Database("trandoshan").Collection("pages")
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// setup production context
+		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
 		// Query the database for result
 		cur, err := contentCollection.Find(ctx, bson.D{})
