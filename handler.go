@@ -48,6 +48,27 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 	}
 }
 
+func getCrawledUrls(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// search for pages
+		var crawledUrls []string
+		err := searchPages(client, "", func(data *PageData) {
+			crawledUrls = append(crawledUrls, data.Url)
+		})
+
+		if err != nil {
+			log.Println("Error while searching pages: " + err.Error())
+		}
+
+		// Write json response
+		if err := httputil.WriteJsonResponse(w, 200, crawledUrls); err != nil {
+			log.Println("Error while writing response to client: " + err.Error())
+		}
+	}
+}
+
 func viewPageContentHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

@@ -40,6 +40,7 @@ func main() {
 	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/pages-stream", pagesStreamHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/forbidden-extensions", getForbiddenExtensionsHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/crawled-urls", getCrawledUrls(client)).Methods(http.MethodGet, http.MethodOptions)
 
 	//TODO: add endpoint to add forbidden-extensions
 
