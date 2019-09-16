@@ -28,12 +28,13 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		// get search criteria
+		// get search criterias
+		url := r.FormValue("url")
 		searchCriteria := r.FormValue("criteria")
 
 		// search for pages
 		var pages []SearchResult
-		err := searchPages(client, searchCriteria, func(data *PageData) {
+		err := searchPages(client, url, searchCriteria, func(data *PageData) {
 			pages = append(pages, SearchResult{Id: data.Id.Hex(), Url: data.Url, CrawlDate: data.CrawlDate})
 		})
 
@@ -54,7 +55,7 @@ func getCrawledUrls(client *mongo.Client) func(w http.ResponseWriter, r *http.Re
 
 		// search for pages
 		var crawledUrls []string
-		err := searchPages(client, "", func(data *PageData) {
+		err := searchPages(client, "", "", func(data *PageData) {
 			crawledUrls = append(crawledUrls, data.Url)
 		})
 
@@ -128,7 +129,7 @@ func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 			switch {
 			// search command
 			case command.Command == "search":
-				_ = searchPages(client, command.Payload, func(data *PageData) {
+				_ = searchPages(client, "", command.Payload, func(data *PageData) {
 					pageBytes, err := json.Marshal(SearchResult{Id: data.Id.Hex(), Url: data.Url, CrawlDate: data.CrawlDate})
 					if err != nil {
 						log.Println("Error while marshalling page: " + err.Error())

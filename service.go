@@ -22,16 +22,25 @@ type ForbiddenExtensionData struct {
 	Extension string `bson:"extension"`
 }
 
-// Search pages using search criteria
+// Search pages using search criterias
 // callback: callback triggered when a page match given search criteria
 // TODO: use channel instead
-func searchPages(client *mongo.Client, searchCriteria string, callback func(data *PageData)) error {
+func searchPages(client *mongo.Client, url string, searchCriteria string, callback func(data *PageData)) error {
 	// Setup production context and acquire database collection
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	pageCollection := client.Database("trandoshan").Collection("pages")
 
 	// Query the database for result
-	filter := bson.D{{"content", primitive.Regex{Pattern: searchCriteria, Options: "i"}}}
+	var filter bson.D
+
+	// add content criteria
+	filter = bson.D{{"content", primitive.Regex{Pattern: searchCriteria, Options: "i"}}}
+
+	// add url criteria if set
+	if url != "" {
+		filter = append(filter, bson.E{Key: "url", Value: url})
+	}
+
 	cur, err := pageCollection.Find(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("Error while querying database: " + err.Error())
