@@ -10,13 +10,6 @@ import (
 	"time"
 )
 
-// Json object returned to the client
-type SearchResult struct {
-	Id        string    `json:"id"`
-	Url       string    `json:"url"`
-	CrawlDate time.Time `json:"crawlDate"`
-}
-
 // Database page mapping
 type PageData struct {
 	Id        primitive.ObjectID `bson:"_id"`

@@ -9,7 +9,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"net/http"
+	"time"
 )
+
+// Json object returned to the client
+type SearchResult struct {
+	Id        string    `json:"id"`
+	Url       string    `json:"url"`
+	CrawlDate time.Time `json:"crawlDate"`
+}
 
 type ClientCommand struct {
 	Command string `json:"command"`
