@@ -18,6 +18,10 @@ type PageData struct {
 	Content   string             `bson:"content"`
 }
 
+type ForbiddenExtensionData struct {
+	Extension string `bson:"extension"`
+}
+
 // Search pages using search criteria
 // callback: callback triggered when a page match given search criteria
 // TODO: use channel instead
@@ -71,4 +75,39 @@ func getPage(client *mongo.Client, objectIdHex string) (*PageData, error) {
 	}
 
 	return &page, nil
+}
+
+// Get all forbidden extensions
+// callback: callback triggered when a extension is found
+// TODO: use channel instead
+func getForbiddenExtensions(client *mongo.Client, callback func(string)) error {
+	// Setup production context and acquire database collection
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	pageCollection := client.Database("trandoshan").Collection("forbiddenExtensions")
+
+	// Query the database for result
+	cur, err := pageCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return fmt.Errorf("Error while querying database: " + err.Error())
+	}
+	defer cur.Close(ctx)
+
+	for cur.Next(ctx) {
+		var forbiddenExtension ForbiddenExtensionData
+		err := cur.Decode(&forbiddenExtension)
+		if err != nil {
+			// if there is a decoding error dot not return error since other results may be decoded
+			log.Println("Error while decoding result: " + err.Error())
+			// go to next iteration
+			break
+		}
+		// trigger callback with decoded page
+		//TODO: string pointer instead?
+		callback(forbiddenExtension.Extension)
+	}
+	if err := cur.Err(); err != nil {
+		return fmt.Errorf("Error with cursor: " + err.Error())
+	}
+
+	return nil
 }

@@ -140,5 +140,26 @@ func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 	}
 }
 
+func getForbiddenExtensionsHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// Get forbidden extensions
+		var forbiddenExtensions []string
+		err := getForbiddenExtensions(client, func(s string) {
+			forbiddenExtensions = append(forbiddenExtensions, s)
+		})
+		if err != nil {
+			log.Println("Error while getting forbidden extensions: " + err.Error())
+			return
+		}
+
+		// Write json response
+		if err := httputil.WriteJsonResponse(w, 200, forbiddenExtensions); err != nil {
+			log.Println("Error while writing response to client: " + err.Error())
+		}
+	}
+}
+
 //TODO: add endpoint to interface with RabbitMQ API
 //TODO: add endpoint to push url in todo queue
