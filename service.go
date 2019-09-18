@@ -14,6 +14,7 @@ import (
 type PageData struct {
 	Id        primitive.ObjectID `bson:"_id"`
 	Url       string             `bson:"url"`
+	Title     string             `bson:"title"`
 	CrawlDate time.Time          `bson:"crawlDate"`
 	Content   string             `bson:"content"`
 }
@@ -30,18 +31,23 @@ func searchPages(client *mongo.Client, url string, searchCriteria string, callba
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	pageCollection := client.Database("trandoshan").Collection("pages")
 
-	// Query the database for result
-	var filter bson.D
-
-	// add content criteria
-	filter = bson.D{{"content", primitive.Regex{Pattern: searchCriteria, Options: "i"}}}
+	// add search criterias
+	// todo: fix or query not working
+	filters := bson.M{
+		"$or": []bson.M{
+			{
+				"title":   bson.M{"$regex": primitive.Regex{Pattern: searchCriteria, Options: "i",}},
+				"content": bson.M{"$regex": primitive.Regex{Pattern: searchCriteria, Options: "i",}},
+			},
+		}}
 
 	// add url criteria if set
 	if url != "" {
-		filter = append(filter, bson.E{Key: "url", Value: url})
+		filters["url"] = bson.M{"url": url}
 	}
 
-	cur, err := pageCollection.Find(ctx, filter)
+	// Query the database for result
+	cur, err := pageCollection.Find(ctx, filters)
 	if err != nil {
 		return fmt.Errorf("Error while querying database: " + err.Error())
 	}

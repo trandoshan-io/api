@@ -16,6 +16,7 @@ import (
 type SearchResult struct {
 	Id        string    `json:"id"`
 	Url       string    `json:"url"`
+	Title     string    `json:"title"`
 	CrawlDate time.Time `json:"crawlDate"`
 }
 
@@ -35,7 +36,7 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 		// search for pages
 		var pages []SearchResult
 		err := searchPages(client, url, searchCriteria, func(data *PageData) {
-			pages = append(pages, SearchResult{Id: data.Id.Hex(), Url: data.Url, CrawlDate: data.CrawlDate})
+			pages = append(pages, SearchResult{Id: data.Id.Hex(), Url: data.Url, Title: data.Title, CrawlDate: data.CrawlDate})
 		})
 
 		if err != nil {
@@ -130,7 +131,7 @@ func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 			// search command
 			case command.Command == "search":
 				_ = searchPages(client, "", command.Payload, func(data *PageData) {
-					pageBytes, err := json.Marshal(SearchResult{Id: data.Id.Hex(), Url: data.Url, CrawlDate: data.CrawlDate})
+					pageBytes, err := json.Marshal(SearchResult{Id: data.Id.Hex(), Url: data.Url, Title: data.Title, CrawlDate: data.CrawlDate})
 					if err != nil {
 						log.Println("Error while marshalling page: " + err.Error())
 						return
@@ -183,5 +184,5 @@ func getForbiddenExtensionsHandler(client *mongo.Client) func(w http.ResponseWri
 	}
 }
 
-//TODO: add endpoint to interface with RabbitMQ API
+//TODO: add endpoint to interface with NATS API
 //TODO: add endpoint to push url in todo queue
