@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -15,12 +14,6 @@ import (
 
 func main() {
 	log.Println("Initializing API")
-
-	// load .env
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Unable to load .env file: ", err.Error())
-	}
-	log.Println("Loaded .env file")
 
 	// initialize and validate database connection
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)

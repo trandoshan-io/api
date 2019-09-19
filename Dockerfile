@@ -6,7 +6,6 @@ RUN apk update && apk upgrade && \
 
 RUN go get -v github.com/gorilla/mux && \
     go get -v github.com/gorilla/websocket && \
-    go get -v github.com/joho/godotenv && \
     go get -v go.mongodb.org/mongo-driver/bson && \
     go get -v go.mongodb.org/mongo-driver/bson/primitive && \
     go get -v go.mongodb.org/mongo-driver/mongo && \
@@ -22,7 +21,7 @@ RUN go build -v api.go handler.go service.go
 # runtime image
 FROM alpine:latest
 COPY --from=builder /app/api /app/
-COPY .env /app/
+
 WORKDIR /app/
 CMD ["./api"]
 
