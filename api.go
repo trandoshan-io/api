@@ -28,10 +28,9 @@ func main() {
 	router := mux.NewRouter()
 
 	// Register endpoints
-	router.HandleFunc("/pages", searchPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
-	router.HandleFunc("/pages/{page-id}/content", viewPageContentHandler(client)).Methods(http.MethodGet, http.MethodOptions)
-	router.HandleFunc("/count-pages", countPagesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
-	router.HandleFunc("/pages-stream", pagesStreamHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/resources", searchResourcesHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/resources/{resource-id}/content", viewResourceContentHandler(client)).Methods(http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/resources-stream", resourcesStreamHandler(client)).Methods(http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/crawled-urls", getCrawledUrls(client)).Methods(http.MethodGet, http.MethodOptions)
 
 	router.Use(mux.CORSMethodMiddleware(router))

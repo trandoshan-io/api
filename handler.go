@@ -13,19 +13,19 @@ import (
 )
 
 // Json object returned to the client
-type SearchResult struct {
+type searchResult struct {
 	Id        string    `json:"id"`
 	Url       string    `json:"url"`
 	Title     string    `json:"title"`
 	CrawlDate time.Time `json:"crawlDate"`
 }
 
-type ClientCommand struct {
+type clientCommand struct {
 	Command string `json:"command"`
 	Payload string `json:"payload"`
 }
 
-func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
+func searchResourcesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -33,19 +33,19 @@ func searchPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 		url := r.FormValue("url")
 		searchCriteria := r.FormValue("criteria")
 
-		// search for pages
-		var pages []SearchResult
-		err := searchPages(client, url, searchCriteria, func(data *PageData) {
-			pages = append(pages, SearchResult{Id: data.Id.Hex(), Url: data.Url, Title: data.Title, CrawlDate: data.CrawlDate})
+		// search for resources
+		var resources []searchResult
+		err := searchResources(client, url, searchCriteria, func(data *resourceData) {
+			resources = append(resources, searchResult{Id: data.Id.Hex(), Url: data.Url, Title: data.Title, CrawlDate: data.CrawlDate})
 		})
 
 		if err != nil {
-			log.Println("Error while searching pages: " + err.Error())
+			log.Printf("Error while searching resources: %s", err)
 		}
 
 		// Write json response
-		if err := httputil.WriteJsonResponse(w, 200, pages); err != nil {
-			log.Println("Error while writing response to client: " + err.Error())
+		if err := httputil.WriteJsonResponse(w, 200, resources); err != nil {
+			log.Printf("Error while writing response to client: %s", err)
 		}
 	}
 }
@@ -54,51 +54,42 @@ func getCrawledUrls(client *mongo.Client) func(w http.ResponseWriter, r *http.Re
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		// search for pages
+		// search for resources
 		var crawledUrls []string
-		err := searchPages(client, "", "", func(data *PageData) {
+		err := searchResources(client, "", "", func(data *resourceData) {
 			crawledUrls = append(crawledUrls, data.Url)
 		})
 
 		if err != nil {
-			log.Println("Error while searching pages: " + err.Error())
+			log.Printf("Error while searching resource: %s", err)
 		}
 
 		// Write json response
 		if err := httputil.WriteJsonResponse(w, 200, crawledUrls); err != nil {
-			log.Println("Error while writing response to client: " + err.Error())
+			log.Printf("Error while writing response to client: %s", err)
 		}
 	}
 }
 
-func viewPageContentHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
+func viewResourceContentHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		// Get page
-		page, err := getPage(client, mux.Vars(r)["page-id"])
+		// Get resource
+		resource, err := getResource(client, mux.Vars(r)["resource-id"])
 		if err != nil {
-			log.Println("Error while getting page: " + err.Error())
+			log.Printf("Error while getting resource: %s", err)
 			return
 		}
 
 		// Write json response
-		if err := httputil.WriteJsonResponse(w, 200, page.Content); err != nil {
-			log.Println("Error while writing response to client: " + err.Error())
+		if err := httputil.WriteJsonResponse(w, 200, resource.Content); err != nil {
+			log.Printf("Error while writing response to client: %s", err)
 		}
 	}
 }
 
-func countPagesHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
-	//pageCollection := client.Database("trandoshan").Collection("pages")
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		return //TODO
-	}
-}
-
-func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
+func resourcesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *http.Request) {
 	//TODO: better upgrader with security check
 	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -107,7 +98,7 @@ func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Println("Error while upgrading connection:" + err.Error())
+			log.Printf("Error while upgrading connection: %s", err)
 			return
 		}
 		defer c.Close()
@@ -116,13 +107,13 @@ func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 			// Read message from client
 			mt, message, err := c.ReadMessage()
 			if err != nil {
-				log.Println("Error while reading message from client: " + err.Error())
+				log.Printf("Error while reading message from client: %s", err)
 				break
 			}
 
-			var command ClientCommand
+			var command clientCommand
 			if err := json.Unmarshal(message, &command); err != nil {
-				log.Println("Error while un-marshalling command: " + err.Error())
+				log.Printf("Error while un-marshalling command: %s", err)
 				break
 			}
 
@@ -130,33 +121,33 @@ func pagesStreamHandler(client *mongo.Client) func(w http.ResponseWriter, r *htt
 			switch {
 			// search command
 			case command.Command == "search":
-				_ = searchPages(client, "", command.Payload, func(data *PageData) {
-					pageBytes, err := json.Marshal(SearchResult{Id: data.Id.Hex(), Url: data.Url, Title: data.Title, CrawlDate: data.CrawlDate})
+				_ = searchResources(client, "", command.Payload, func(data *resourceData) {
+					resourceBytes, err := json.Marshal(searchResult{Id: data.Id.Hex(), Url: data.Url, Title: data.Title, CrawlDate: data.CrawlDate})
 					if err != nil {
-						log.Println("Error while marshalling page: " + err.Error())
+						log.Printf("Error while marshalling resource: %s", err)
 						return
 					}
 
-					_ = c.WriteMessage(mt, pageBytes)
+					_ = c.WriteMessage(mt, resourceBytes)
 				})
-			// get page content command
+				// get resource content command
 			case command.Command == "get-content":
-				page, err := getPage(client, command.Payload)
+				resource, err := getResource(client, command.Payload)
 				if err != nil {
-					log.Println("Error while getting page: " + err.Error())
+					log.Printf("Error while getting resource: %s", err)
 					return
 				}
 
-				// Encode page content in base64
+				// Encode resource content in base64
 				//TODO: improve
-				contentBase64 := base64.StdEncoding.EncodeToString([]byte(page.Content))
+				contentBase64 := base64.StdEncoding.EncodeToString([]byte(resource.Content))
 				_ = c.WriteMessage(mt, []byte(contentBase64))
 			}
 
 			// Write message to client
 			err = c.WriteMessage(mt, message)
 			if err != nil {
-				log.Println("Error while writing message to client: " + err.Error())
+				log.Printf("Error while writing message to client: %s", err)
 				break
 			}
 		}

@@ -10,8 +10,13 @@ import (
 	"time"
 )
 
-// Database page mapping
-type PageData struct {
+const (
+	trandoshanDatabase = "trandoshan"
+	resourceCollection = "resources"
+)
+
+// Database resource mapping
+type resourceData struct {
 	Id        primitive.ObjectID `bson:"_id"`
 	Url       string             `bson:"url"`
 	Title     string             `bson:"title"`
@@ -19,21 +24,21 @@ type PageData struct {
 	Content   string             `bson:"content"`
 }
 
-// Search pages using search criterias
-// callback: callback triggered when a page match given search criteria
+// Search resources using search criterias
+// and trigger given callback when a resource match given search criteria
 // TODO: use channel instead
-func searchPages(client *mongo.Client, url string, searchCriteria string, callback func(data *PageData)) error {
+func searchResources(client *mongo.Client, url string, searchCriteria string, callback func(data *resourceData)) error {
 	// Setup production context and acquire database collection
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	pageCollection := client.Database("trandoshan").Collection("pages")
+	resourceCollection := client.Database(trandoshanDatabase).Collection(resourceCollection)
 
 	// add search criterias
 	// todo: fix or query not working
 	filters := bson.M{
 		"$or": []bson.M{
 			{
-				"title":   bson.M{"$regex": primitive.Regex{Pattern: searchCriteria, Options: "i",}},
-				"content": bson.M{"$regex": primitive.Regex{Pattern: searchCriteria, Options: "i",}},
+				"title":   bson.M{"$regex": primitive.Regex{Pattern: searchCriteria, Options: "i"}},
+				"content": bson.M{"$regex": primitive.Regex{Pattern: searchCriteria, Options: "i"}},
 			},
 		}}
 
@@ -43,47 +48,47 @@ func searchPages(client *mongo.Client, url string, searchCriteria string, callba
 	}
 
 	// Query the database for result
-	cur, err := pageCollection.Find(ctx, filters)
+	cur, err := resourceCollection.Find(ctx, filters)
 	if err != nil {
-		return fmt.Errorf("Error while querying database: " + err.Error())
+		return fmt.Errorf("error while querying database: %s", err)
 	}
 	defer cur.Close(ctx)
 
 	for cur.Next(ctx) {
-		var page PageData
-		err := cur.Decode(&page)
+		var resource resourceData
+		err := cur.Decode(&resource)
 		if err != nil {
 			// if there is a decoding error dot not return error since other results may be decoded
-			log.Println("Error while decoding result: " + err.Error())
+			log.Printf("error while decoding result: %s", err)
 			// go to next iteration
 			break
 		}
-		// trigger callback with decoded page
-		callback(&page)
+		// trigger callback with decoded resource
+		callback(&resource)
 	}
 	if err := cur.Err(); err != nil {
-		return fmt.Errorf("Error with cursor: " + err.Error())
+		return fmt.Errorf("error with cursor: %s", err)
 	}
 
 	return nil
 }
 
-// Get page using his object-id
-func getPage(client *mongo.Client, objectIdHex string) (*PageData, error) {
+// Get resource using his object-id
+func getResource(client *mongo.Client, objectIdHex string) (*resourceData, error) {
 	objectId, err := primitive.ObjectIDFromHex(objectIdHex)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to convert objectId from hex value: " + err.Error())
+		return nil, fmt.Errorf("unable to convert objectId from hex value: %s", err)
 	}
 
 	// Setup production context and acquire database collection
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	pageCollection := client.Database("trandoshan").Collection("pages")
+	resourceCollection := client.Database(trandoshanDatabase).Collection(resourceCollection)
 
 	// Query database for result
-	var page PageData
-	if err := pageCollection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&page); err != nil {
-		return nil, fmt.Errorf("Error while decoding result: " + err.Error())
+	var resource resourceData
+	if err := resourceCollection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&resource); err != nil {
+		return nil, fmt.Errorf("error while decoding result: %s", err)
 	}
 
-	return &page, nil
+	return &resource, nil
 }
